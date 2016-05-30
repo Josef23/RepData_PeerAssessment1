@@ -1,0 +1,129 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+## Loading and preprocessing the data
+
+
+```{r ReadData}
+
+  activity<-read.table("activity.csv", header = TRUE, sep = ",")
+  
+```
+
+
+## What is mean total number of steps taken per day?
+
+```{r TotalNumberSteps}
+  steps.daySum <- aggregate(activity$steps, by=list(date=activity$date), FUN=sum, na.rm = TRUE)
+  names(steps.daySum)[names(steps.daySum) == "x"] = "steps"
+  library(ggplot2)
+  g = ggplot(steps.daySum, aes(x = date, y = steps))+ geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  print(g)
+  steps.dayMean <- aggregate(activity$steps, by=list(date=activity$date), FUN=mean, na.rm = TRUE)
+  names(steps.dayMean)[names(steps.dayMean) == "x"] = "steps.daymean"
+  
+  steps.dayMedian <- aggregate(activity$steps, by=list(date=activity$date), FUN=median, na.rm = TRUE)
+  names(steps.dayMedian)[names(steps.dayMedian) == "x"] = "steps.daymedian"
+
+```
+Bellow we see the mean per day.
+```{r}
+  steps.dayMean
+```
+
+Bellow we see the median per day.
+```{r}
+  steps.dayMedian
+```
+
+## What is the average daily activity pattern?
+
+```{r IntervalPlots}
+  steps.interval <- aggregate(activity$steps, by=list(interval=activity$interval), FUN=sum, na.rm = TRUE)
+  names(steps.interval)[names(steps.interval) == "x"] = "steps"
+
+  library(ggplot2)
+  g = ggplot(steps.interval, aes(x = interval, y = steps))+ geom_line()
+  print(g)
+  maxIntervalSteps <- max(steps.interval$steps, na.rm = TRUE)
+  maxInterval <- which(steps.interval$steps == max(steps.interval$steps), arr.ind = TRUE)
+```
+
+The inerval with the most steps recorded is:
+```{r}  
+  steps.interval$interval[maxInterval]
+```
+
+Bellow we see the steps of all the 5 minute intervals.
+```{r}
+  steps.interval
+```
+
+## Inputing missing values
+  
+The number of missing values is:
+```{r}
+  sum(is.na(activity$steps))
+  activity.full <- activity
+  for (i in 1:nrow(activity.full)){
+    if (is.na(activity.full$steps[i])){
+      temp.int <- which(steps.interval$interval == activity.full$interval[i])
+      activity.full$steps[i] <- steps.interval$steps[temp.int]/61
+    }
+  }
+```
+  
+The number of missing values now is:
+```{r}
+  sum(is.na(activity.full$steps))
+```
+
+```{r}
+  steps.full.daySum <- aggregate(activity.full$steps, by=list(date=activity.full$date), FUN=sum, na.rm = TRUE)
+  names(steps.full.daySum)[names(steps.full.daySum) == "x"] = "steps"
+  g = ggplot(steps.full.daySum, aes(x = date, y = steps))+ geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  print(g)
+```
+After adding the missing values the mean went up by about 15% and the median has some values where before it had everywhere zeros.
+
+```{r}
+  steps.full.dayMean <- aggregate(activity.full$steps, by=list(date=activity.full$date), FUN=mean, na.rm = TRUE)
+  names(steps.full.dayMean)[names(steps.full.dayMean) == "x"] = "steps.full.daymean"
+  
+  steps.full.dayMedian <- aggregate(activity.full$steps, by=list(date=activity.full$date), FUN=median, na.rm = TRUE)
+  names(steps.full.dayMedian)[names(steps.full.dayMedian) == "x"] = "steps.full.daymedian"
+  
+```
+  
+The number of missing values is:
+```{r}
+  sum(is.na(activity.full$steps))
+```
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+```{r Weekdays}
+
+  activity$day <- weekdays(as.Date(activity$date, format='%Y-%m-%d'))
+  for (i in 1:nrow(activity)){
+    if (activity$day[i] == "Κυριακή" | activity$day[i] == "Σάββατο"){
+      activity$day[i] = "weekend"
+    }
+    else{
+      activity$day[i] = "weekday"
+    }
+  }
+  
+  steps.interval.day <- aggregate(activity$steps, by=list(interval=activity$interval, day=activity$day), FUN=sum, na.rm = TRUE)
+  names(steps.interval.day)[names(steps.interval.day) == "x"] = "steps"
+  
+  ggplot(steps.interval.day, aes(x = interval, y = steps, group = day)) +
+    geom_line() +
+    facet_grid( ~ day)
+  
+```
